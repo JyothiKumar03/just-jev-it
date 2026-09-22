@@ -109,10 +109,11 @@ present 193.6x/444.6x as typical or guaranteed** — prefer the narrower
 
 **Independent benchmarks are more mixed and task-dependent than the vendor
 headline:**
-- Classification (4esv/jev-eval, 300 items/task): Jev beat GPT-5.6 Terra on
-  some tasks (e.g. better calibration on CLINC/polarity) and lost on others
-  (Banking77 intent: 0.780 vs 0.847). Latency stayed flat (~0.17–0.20s) from
-  2 to 151 answer options.
+- Classification (4esv/jev-eval, 300 items/task): Jev never clearly beat
+  GPT-5.6 Terra on raw accuracy (tied on Polarity at 0.970, trailed on
+  Banking77 intent 0.780 vs 0.847); calibration beat Terra's only on
+  Sentiment5 (ECE 0.200 vs 0.303), and was worse on Polarity (0.042 vs
+  0.020). Latency stayed flat (~0.17–0.20s) from 2 to 151 answer options.
 - Phishing detection (beri.net): a single Jev question underperformed Claude
   Haiku (62.6% vs 81.3%), but five decomposed questions closed the gap
   (95.0% vs 93.2%, not significant) at ~12–27x lower cost, ~3x lower latency.
@@ -154,7 +155,7 @@ is right.
 3. **Dates/times** — reads dates as text, not ordered quantities; extract with Jev, compute with code.
 4. **Indirection** — multi-hop reasoning and double negatives hurt; write instructions directly, name state fields.
 5. **Large irrelevant state** — unrelated detail is a distractor; send only the fields the question needs.
-6. **Adversarial content** — treats state as data, not hostile; injected instructions can shift the answer.
+6. **Adversarial content** — treats state as data, not hostile; injected instructions can shift the answer; be explicit in the criteria and test integrations thoroughly before deploying to many users.
 7. **Contradictory instructions/criteria** — conflicting/overlapping categories break it; use a "two people agree" test.
 8. **Structural invariants not guaranteed** — probabilities across separate questions need not sum to 1; use one `choice` question instead of deriving cross-question invariants.
 9. **Generation** — not trained for it, ineffective/slow; turn extraction into a `choice` over candidate options.
