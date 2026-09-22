@@ -93,6 +93,13 @@ def decide_next_action(agent_state, client: TypeSafeClient):
         },
     )
     answer = response.choices["next_action"]
+    # `.choice` access is directly confirmed by jev-research.md's official
+    # Python README example. `.confidence` as a Python attribute (rather
+    # than `["confidence"]`) is inferred from the documented Answer JSON
+    # schema (choice answers carry a `confidence` field) plus the SDK's
+    # typed-accessor pattern — not directly shown in a Python code example
+    # in the research. Verify the exact attribute name against the current
+    # SDK before relying on it.
     if answer.confidence < 0.5:
         return "escalate"  # low-confidence answers shouldn't drive the loop
     return answer.choice
