@@ -1,0 +1,16 @@
+{
+  "name": "jk-skills",
+  "owner": {
+    "name": "Jyothi Kumar",
+    "url": "https://github.com/JyothiKumar03"
+  },
+  "description": "Jyothi Kumar's Claude Code skills",
+  "plugins": [
+    {
+      "name": "just-jev-it",
+      "description": "Audit an existing workflow, agent, automation, or codebase to find LLM call sites and output-branching decision points that TypeSafe AI's Jev model could replace or augment, then plan, execute, and validate the migration.",
+      "source": "./",
+      "homepage": "https://github.com/JyothiKumar03/just-jev-it"
+    }
+  ]
+}

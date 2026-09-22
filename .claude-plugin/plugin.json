@@ -1,0 +1,14 @@
+{
+  "name": "just-jev-it",
+  "displayName": "just-jev-it",
+  "description": "Audit an existing workflow, agent, automation, or codebase to find LLM call sites and output-branching decision points that TypeSafe AI's Jev model could replace or augment, then plan, execute, and validate the migration.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Jyothi Kumar",
+    "url": "https://github.com/JyothiKumar03"
+  },
+  "homepage": "https://github.com/JyothiKumar03/just-jev-it",
+  "repository": "https://github.com/JyothiKumar03/just-jev-it",
+  "license": "MIT",
+  "keywords": ["jev", "typesafe-ai", "llm-cost", "classification", "code-audit", "migration"]
+}

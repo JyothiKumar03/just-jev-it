@@ -1,5 +1,23 @@
 # just-jev-it
 
+## Install
+
+**As a Claude Code plugin (recommended — auto-updates when this repo changes):**
+
+```
+/plugin marketplace add JyothiKumar03/just-jev-it
+/plugin install just-jev-it@jk-skills
+```
+
+**Manually (personal skill, no plugin system involved):**
+
+```bash
+git clone https://github.com/JyothiKumar03/just-jev-it.git
+cp -r just-jev-it ~/.claude/skills/just-jev-it
+```
+
+Either way, start a new Claude Code session afterward — skills are loaded at session start.
+
 ## What it does
 
 Audit an existing workflow, agent, automation, or codebase to find LLM call sites where TypeSafe AI's Jev model (a non-generative, typed-decision "System One" model) could replace or augment them, then plan, execute, and validate the migration. This skill works through four phases: **Audit** (find LLM calls and output-branching points), **Plan** (write before/after migration strategies with user approval gate), **Execute** (apply approved changes), and **Validate** (confirm against Jev with real or simulated runs).
