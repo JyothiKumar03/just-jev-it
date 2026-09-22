@@ -25,6 +25,14 @@ Each Answer's shape depends on the question type:
 A third-party guide (DataCamp) has been observed showing an incorrect,
 non-official shape using "options"/"min"/"max" fields instead of "criteria".
 This script flags that shape as invalid rather than silently accepting it.
+
+Each result carries its own "mode" ("real" or "simulated") in addition to
+the top-level aggregate "mode" ("real" only if every case was real,
+"simulated" only if every case was simulated, "mixed" otherwise), and a
+"matches_expected" field: True/False when the case has an
+"expected_decision" and the decision is a directly string-comparable
+"choice" answer, or None (not checked) when there's no "expected_decision"
+or the decision is a "noul"/"score" float.
 """
 import argparse
 import json
@@ -113,11 +121,29 @@ def extract_decision(case, answers):
     return None, None
 
 
-# Per jev-research.md's "Errors and retries" section: 429 (rate limit) and
-# 529 (service overloaded) should be retried with exponential backoff; the
-# official SDKs do this automatically. This is a lightweight validation
-# script, not a production client, so we keep it to a couple of short,
-# fixed-backoff retries rather than a full retry framework.
+def compute_matches_expected(case, decision):
+    """Compare `decision` to the case's `expected_decision`.
+
+    Returns True/False when there's an `expected_decision` to compare
+    against AND `decision` is directly string-comparable (a `choice`
+    answer). Returns None (not checked) when there's no `expected_decision`,
+    or when `decision` is a `noul`/`score` float that isn't a like-for-like
+    string comparison — reported honestly as "not checked" rather than
+    inventing a fuzzy-match heuristic for numeric answers.
+    """
+    expected = case.get("expected_decision")
+    if expected is None:
+        return None
+    if isinstance(decision, str) and isinstance(expected, str):
+        return decision == expected
+    return None
+
+
+# Per TypeSafe's documented API guidance: 429 (rate limit) and 529 (service
+# overloaded) should be retried with exponential backoff; the official SDKs
+# do this automatically. This is a lightweight validation script, not a
+# production client, so we keep it to a couple of short, fixed-backoff
+# retries rather than a full retry framework.
 RETRYABLE_STATUS_CODES = {429, 529}
 MAX_RETRIES = 2
 BACKOFF_SECONDS = 1.5
@@ -181,15 +207,26 @@ def main():
     )
     args = parser.parse_args()
 
-    with open(args.cases) as f:
-        cases = json.load(f)
+    try:
+        with open(args.cases) as f:
+            cases = json.load(f)
+    except OSError as exc:
+        print(f"Error: could not read cases file '{args.cases}': {exc}", file=sys.stderr)
+        return 1
+    except json.JSONDecodeError as exc:
+        print(f"Error: could not parse cases file '{args.cases}' as JSON: {exc}", file=sys.stderr)
+        return 1
 
     api_key = os.environ.get(API_KEY_ENV)
-    mode = "real" if api_key else "simulated"
     results = []
+    result_modes = []
 
     for case in cases:
         schema_warnings = validate_case_schema(case)
+        # Per-result mode: "real" only if this specific case's call actually
+        # reached the live API; falls back to "simulated" below on any
+        # exception, independent of how other cases in this run fared.
+        result_mode = "real" if api_key else "simulated"
 
         try:
             if api_key:
@@ -205,7 +242,7 @@ def main():
                 note=f"SIMULATED - real API call failed ({exc}), falling back to simulation",
             )
             outcome["error"] = str(exc)
-            mode = "simulated"
+            result_mode = "simulated"
         except (KeyError, json.JSONDecodeError) as exc:
             # A malformed case (missing "state"/"questions") or an
             # unexpected non-JSON/malformed response body should degrade
@@ -215,14 +252,30 @@ def main():
                 note=f"SIMULATED - malformed case or response ({exc!r}), falling back to simulation",
             )
             outcome["error"] = repr(exc)
-            mode = "simulated"
+            result_mode = "simulated"
+
+        outcome["matches_expected"] = compute_matches_expected(case, outcome.get("decision"))
 
         if schema_warnings:
             outcome["schema_warnings"] = schema_warnings
 
+        outcome["mode"] = result_mode
+        result_modes.append(result_mode)
         results.append({"case_id": case.get("id"), **outcome})
 
-    print(json.dumps({"mode": mode, "results": results}, indent=2))
+    # Aggregate mode: "real" only if every case's call was real, "simulated"
+    # only if every case's call was simulated, "mixed" otherwise. An empty
+    # case list falls back to what the environment alone implies.
+    if not result_modes:
+        aggregate_mode = "real" if api_key else "simulated"
+    elif all(m == "real" for m in result_modes):
+        aggregate_mode = "real"
+    elif all(m == "simulated" for m in result_modes):
+        aggregate_mode = "simulated"
+    else:
+        aggregate_mode = "mixed"
+
+    print(json.dumps({"mode": aggregate_mode, "results": results}, indent=2))
     return 0
 
 

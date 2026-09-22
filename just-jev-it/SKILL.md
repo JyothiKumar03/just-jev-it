@@ -77,9 +77,13 @@ migration plan.
      from `references/integration-patterns.md` — including its accessor
      convention (`.choices["key"].choice` for the Python SDK,
      `.answers.key` for JS/raw REST — don't mix them) and a `needs_review`
-     or equivalent fallback option in the schema itself wherever the
-     original code has no safe default, since Jev cannot abstain on a
-     forced choice.
+     or equivalent fallback option added to **every** `choice` question's
+     schema, unconditionally — not just wherever the original code
+     happened to have no safe default. Jev cannot abstain on a forced
+     choice, so this option has to exist in the schema itself even when a
+     pre-existing fallback branch looks safe to just delete (deleting it
+     can remove the only abstain path that existed); see
+     `references/fit-heuristics.md`'s Example 3.
    - **What changes and why**: one or two sentences — e.g. "the manual
      malformed-response fallback branch is removed because schema
      conformance is guaranteed; the confidence check stays because the
@@ -126,15 +130,26 @@ point(s) against Jev directly — don't just trust that the code compiles.
    case — most users won't have `TYPESAFE_API_KEY` set, so the default run
    is simulated, and the script's simulated path just echoes
    `expected_decision` straight back as the decision; a case without it
-   reports `"decision": "unknown"` and validates nothing.
+   reports `"decision": "unknown"` and validates nothing. Write `cases.json`
+   to a throwaway location (e.g. a temp directory, or alongside other
+   scratch files you're already using) — it's not part of the user's
+   codebase — and tell the user its path (or remove it) once Phase 4 is
+   done.
 2. Run the validator exactly as it's built to be called:
    ```
    python3 scripts/validate_with_jev.py --cases cases.json
    ```
-   It prints `{"mode": "real"|"simulated", "results": [...]}` — `"real"`
-   only when `TYPESAFE_API_KEY` is set in the environment and the call
-   succeeded; otherwise it falls back to `"simulated"` automatically and
-   labels every result accordingly.
+   (`scripts/validate_with_jev.py` here is relative to this skill's own
+   directory, not the current working directory — resolve it against the
+   skill root, since you'll typically be sitting in the user's repo root
+   when you run this.) It prints `{"mode": "real"|"simulated"|"mixed",
+   "results": [...]}` — the top-level `mode` is `"real"` only if every
+   case's call reached the live API, `"simulated"` only if every case
+   fell back to simulation, and `"mixed"` if some of each happened (e.g.
+   one case succeeded against the real API while another fell back after
+   a transient error). Each entry in `results` also carries its own
+   per-result `mode` (`"real"` or `"simulated"`), so you can tell exactly
+   which cases were measured and which weren't even in a `"mixed"` run.
 3. **If any result carries a `schema_warnings` field, fix `cases.json`
    and re-run before reporting anything to the user.** The script attaches
    this per-case when a question's shape doesn't match the real API (wrong
@@ -143,11 +158,17 @@ point(s) against Jev directly — don't just trust that the code compiles.
    the run or change the exit code, so a clean-looking result can still
    carry one.
 4. Report the results back to the user **verbatim**, including the
-   top-level `mode` field. Never summarize a `simulated` run as if it
-   were measured behavior — say plainly "this was simulated, not a real
-   Jev call" whenever `mode` is `"simulated"`, and tell the user how to
-   get a real run (`export TYPESAFE_API_KEY=...` and re-run) if they want
-   one.
+   top-level `mode` field and each result's per-result `mode`. Never
+   summarize a `simulated` run as if it were measured behavior — say
+   plainly "this was simulated, not a real Jev call" whenever a result's
+   `mode` is `"simulated"`, and tell the user how to get a real run
+   (`export TYPESAFE_API_KEY=...` and re-run) if they want one. **Call out
+   any result with `matches_expected: false` prominently** — that means
+   the migrated decision point disagreed with the case's own
+   `expected_decision`, which is exactly the kind of behavior-preservation
+   break Phase 4 exists to catch. `matches_expected` is `null` (not
+   checked) for `noul`/`score` cases or cases with no `expected_decision`
+   — don't treat `null` as a pass.
 
 ## Guardrails
 

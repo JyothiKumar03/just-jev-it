@@ -1,9 +1,10 @@
 # Jev / System One — Overview
 
 Background on TypeSafe AI's Jev model, for judging whether a decision point
-in someone's workflow is Jev-shaped. Condensed from `jev-research.md`
-(2026-09-22, 33 sources) — see `## Sources` below, and that artifact for
-full detail and provenance.
+in someone's workflow is Jev-shaped. Condensed from a broader research pass
+(2026-09-22, 33 sources) — see `## Sources` below for the citable external
+references (TypeSafe AI's own docs, press coverage, and independent
+evaluations).
 
 ## What It Is
 
@@ -56,7 +57,7 @@ and do not influence each other's answers.
 
 ```
 POST https://api.typesafe.ai/v1/systemone
-{ "state": ..., "model": "jev-latest", "questions": { "<key>": {type, instructions, criteria} } }
+{ "state": ..., "model": "jev-1.13.0", "questions": { "<key>": {type, instructions, criteria} } }
 ```
 
 Response: `{ "model", "answers": {"<key>": <Answer>}, "usage" }`. Context
@@ -194,6 +195,3 @@ https://github.com/4esv/jev-eval ,
 https://www.beri.net/article/typesafe-jev-typed-decision-model-calibration-decomposition-shadow-eval ,
 https://langfuse.com/blog/2026-09-18-using-typesafes-jev-for-evals ,
 https://news.ycombinator.com/item?id=49717558
-
-Full research, additional integrations, and use-case citations:
-`docs/superpowers/plans/artifacts/jev-research.md`.

@@ -16,6 +16,9 @@ This skill audits *existing* code — not for designing a brand-new Jev integrat
 ## What's inside
 
 ```
+SKILL.md                    — The skill itself: the four-phase Audit → Plan → Execute → Validate
+                               workflow an agent follows when invoked
+
 references/
 ├── jev-overview.md         — What Jev is: its three typed question primitives (noul, choice, score),
 │                             documented limitations, why it's not a drop-in LLM replacement
@@ -29,17 +32,21 @@ scripts/
 ├── sample_cases.json       — Template for cases.json validation format
 │                             ({id, state, questions, decision_key, expected_decision, model})
 └── validate_with_jev.py    — Phase 4 validator: runs cases against Jev, outputs
-                             {"mode": "real"|"simulated", "results": [...]}
+                             {"mode": "real"|"simulated"|"mixed", "results": [...]}
+
+LICENSE.txt                 — MIT license text
 ```
 
 ## Validation
 
-Phase 4 **Validation** distinguishes between two modes:
+Phase 4 **Validation** distinguishes between two modes, reported per result and as a top-level aggregate:
 
 - **Real mode** (`"mode": "real"`): Triggered when `TYPESAFE_API_KEY` is set in the environment and the Jev API call succeeds. Provides measured behavior against the real Jev service.
 - **Simulated mode** (`"mode": "simulated"`): Default fallback when no API key is set or the call fails. The validator echoes back each case's `expected_decision` unchanged, validating only that the schema is well-formed — not real-world accuracy.
 
-Always surface the `mode` field in results. Never present a simulated run as measured behavior; tell the user how to get a real run (`export TYPESAFE_API_KEY=...` and re-run).
+The top-level `mode` is `"real"` only if every case was real, `"simulated"` only if every case was simulated, and `"mixed"` if some of each happened in the same run (e.g. one case's call succeeded while another fell back after an error) — each result's own `mode` tells you which is which. Each result also carries `matches_expected` (true/false/null): whether the decision matched `expected_decision`, checked only for string-comparable `choice` answers — `null` for `noul`/`score` answers or cases with no `expected_decision`.
+
+Always surface the `mode` field(s) in results. Never present a simulated run as measured behavior; tell the user how to get a real run (`export TYPESAFE_API_KEY=...` and re-run).
 
 ## Status
 

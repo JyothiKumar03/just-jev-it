@@ -37,4 +37,8 @@ The one caveat is procedural, not a skill defect: Phase 2's approval gate
 could only be exercised by the same agent playing both roles in this test,
 so this run demonstrates the skill *asks* for approval correctly, not that
 a real second-party approval flow works — that needs a genuine multi-party
-run to fully confirm.
+run to fully confirm. Separately, `agent.py`'s `classify_priority`/
+`draft_reply` pair is verbatim identical to `fit-heuristics.md`'s own
+Example 1/Example 2 worked examples, so this smoke test can't independently
+catch a defect in those heuristics — it's testing the skill against its own
+canonical example, not a case the heuristics haven't already seen.

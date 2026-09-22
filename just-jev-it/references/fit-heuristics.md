@@ -1,13 +1,25 @@
 # Fit Heuristics
 
 How to classify an LLM call site found during the audit phase as a Jev
-candidate or not. Every entry below traces to `jev-overview.md` or the
-fuller `docs/superpowers/plans/artifacts/jev-research.md` — this file adds
-no new claims about Jev, only pattern-matching rules built on top of them.
+candidate or not. Every entry below traces to `references/jev-overview.md`
+— this file adds no new claims about Jev, only pattern-matching rules built
+on top of it. Background research for this skill is summarized in
+`references/jev-overview.md`; claims here that don't map to a specific
+`jev-overview.md` section trace to the same underlying sources (TypeSafe
+AI's own docs, press coverage, and independent evaluations — see
+`jev-overview.md`'s `## Sources` section for the citable list).
 
-**Backbone test** (community suitability checklist, cited in
-`jev-research.md` under "Documented and Speculative Use Cases" — "Suitability
-test published by TypeSafe-derived community reference"): a decision point
+## Contents
+
+- [Good Jev Fit](#good-jev-fit)
+- [Poor Jev Fit](#poor-jev-fit)
+- [Worked Examples](#worked-examples)
+  - [Example 1 — Ticket priority classification (Good Fit)](#example-1--ticket-priority-classification-good-fit)
+  - [Example 2 — Drafting a customer reply (Poor Fit, no migration)](#example-2--drafting-a-customer-reply-poor-fit-no-migration)
+  - [Example 3 — Tool-call guardrail with confidence gating (Good Fit)](#example-3--tool-call-guardrail-with-confidence-gating-good-fit)
+
+**Backbone test** (a suitability checklist sourced from a TypeSafe-derived
+community reference, per the background research above): a decision point
 is a Jev candidate when **all** of these hold —
 
 1. the AI *decides* rather than *creates*
@@ -42,42 +54,37 @@ it can be applied without re-deriving it from scratch at every call site.
   return one of a small number of typed values, and that fallback exists
   only because an LLM can't structurally guarantee it. Jev removes the
   fallback need: schema conformance is "mathematically impossible" to
-  violate (`jev-research.md`, "How it differs mechanically from an LLM
-  call" comparison table; "Type errors: possible" vs. "mathematically
-  impossible"). Note this schema guarantee is about *shape*, not
-  correctness — see the "can't hallucinate" caveat in Poor Fit / caveats
-  below, and keep validating.
+  violate (`jev-overview.md`, "What It Is" comparison table — "Type
+  errors: possible" vs. "mathematically impossible"). Note this schema
+  guarantee is about *shape*, not correctness — see the "can't hallucinate"
+  caveat in Poor Fit / caveats below, and keep validating.
 
 - **The call's output drives `if`/`elif`/`switch` control flow rather than
   being displayed or stored as content.** This is the "AI decides, software
   controls" mental model TypeSafe states directly and that this skill
-  audits for (`jev-research.md`, "How it differs mechanically from an LLM
-  call"; `jev-overview.md`, "Mental model when auditing a workflow").
+  audits for (`jev-overview.md`, "Mental model when auditing a workflow").
 
 - **The call is a named member of a documented use-case family:**
   classification, intent/ticket routing, urgency/frustration/severity
   scoring, safety or moderation classification, citation verification
   (supports/contradicts/says-nothing), spam/phishing detection, tool-call
   guardrail screening before execution, or document/search relevance
-  ranking. Each has at least one named production or pilot deployment
-  (`jev-research.md`, "Documented and Speculative Use Cases": Vercel safety
-  classification, Bryo AI email classification, `pi-warden` tool-call
-  guardrail, legal-retrieval reranking, citation verification, alert
-  triage, CV screening, phishing detection).
+  ranking. These categories are drawn from the background research behind
+  this skill; see `jev-overview.md`'s "Performance & Cost Claims" section
+  for the publicly-citable named deployments (Vercel safety classification,
+  Bryo AI email classification, beri.net's phishing-detection study).
 
 - **All the information the call needs is already assembled in local
   variables at the call site** — no mid-call fetch of more context.
   Matches backbone criterion 4 (fits in state) and the state guidance that
   a single request evaluates one self-contained state
-  (`jev-overview.md`/`jev-research.md`, "Request Shape" / "State
-  guidance").
+  (`jev-overview.md`, "Request Shape").
 
 - **A confidence or probability threshold already gates the branch**, e.g.
   `if confidence > 0.8: auto_approve() else: flag_for_review()`. This is
   exactly Jev's documented "confidence-gated routing" pattern, and the
   `confidence` field is a first-class part of every `choice`/`score`
-  answer (`jev-research.md`, "Officially documented architectural
-  patterns" #2; "Confidence semantics").
+  answer (`jev-overview.md`, "Confidence Semantics").
 
 - **An expert reading the same input could make the call in a few
   seconds** — "is this billing or technical", "does this violate policy
@@ -97,15 +104,15 @@ it can be applied without re-deriving it from scratch at every call site.
   documentation. Directly on the vendor's "do not use Jev for" list:
   "Prose, chat replies, code, summaries — use an LLM"; Jev "do[es] not
   write replies, produce code, or generate reasoning explanations," and
-  "generates no text at all" (`jev-research.md`, "Explicit 'do not use Jev
-  for' list"; "Hard capability boundaries"; `jev-overview.md`, "Do not use
-  Jev for").
+  "generates no text at all" (`jev-overview.md`, "Limitations" — "Hard
+  capability boundaries"; "Do not use Jev for").
 
 - **The output is fed into another LLM prompt as unstructured context** —
   e.g. call A's free-text response is string-interpolated into call B's
   prompt as narrative material (not re-parsed into a typed value first).
   Because Jev can't generate text, this chain has nothing to hand to the
-  next prompt (`jev-research.md`, "No text generation at all"). Distinguish
+  next prompt (`jev-overview.md`, "Limitations" — "No text generation, and
+  answer types are fixed in advance"). Distinguish
   this from a case that *looks* similar but isn't: if the only thing
   downstream code does with that free text is immediately re-parse it into
   a fixed set of values, it's actually the "re-parsed into an enum" good-fit
@@ -119,57 +126,56 @@ it can be applied without re-deriving it from scratch at every call site.
   though it superficially resembles a bounded task; per weakness #9
   ("Generation"), Jev is "not trained for it; ineffective and slow" unless
   the task can be reframed as choosing among pre-enumerated candidates
-  (`jev-research.md`, "The nine documented weaknesses" #9).
+  (`jev-overview.md`, "jaggedness" weakness #9 "Generation").
 
 - **Exact arithmetic, counting, or date/time logic embedded in the
   prompt** — "calculate days until expiration and decide if within SLA",
   "sum these totals and check the budget", "is this date before that
   one". Explicitly called out: "Jev reads dates as text, not as ordered
   quantities" and "recognizes answer shapes rather than calculating";
-  vendor guidance is "keep arithmetic in code" (`jev-research.md`, "The
-  nine documented weaknesses" #2 Math and numbers, #3 Date and time
-  comparison; "do not use Jev for... exact logic").
+  vendor guidance is "keep arithmetic in code" (`jev-overview.md`,
+  weaknesses #2 "Math and numbers" and #3 "Dates/times"; "Do not use Jev
+  for" — "exact logic").
 
 - **A written rationale or explanation is part of what the call must
   return**, e.g. "explain your reasoning, then answer X" where the
   explanation text itself is stored or displayed for audit/compliance.
   Jev "returns probabilities only, with no natural-language explanation of
   *why*" and explicitly cannot satisfy "anything needing a written
-  reasoning trace for audit" (`jev-research.md`, "No rationale / audit
-  trail"; "do not use Jev for" list).
+  reasoning trace for audit" (`jev-overview.md`, "Limitations" — "No
+  rationale/audit trail"; "Do not use Jev for").
 
 - **The call needs to fetch more information mid-decision** — a
   retrieval/tool-use loop where the model decides what to search for next,
   or any step that pulls in context beyond what's already in scope at the
   call site. "Jev only evaluates the state you pass in" — it cannot fetch
-  outside context itself (`jev-research.md`, "No external context";
-  "Anything requiring retrieval of context outside the submitted state").
+  outside context itself (`jev-overview.md`, "Limitations" — "Text-only
+  input, state-only context").
 
 - **The call operates on images, audio, video, or on non-English/CJK
   content where accuracy matters.** State is text-only ("images, audio,
   and video are not supported"); non-English languages including CJK are
-  accepted but "currently have lower accuracy" (`jev-research.md`,
-  "Text-only input"; "Language").
+  accepted but "currently have lower accuracy" (`jev-overview.md`,
+  "Limitations" — "Text-only input, state-only context").
 
 - **Multi-turn dialogue where the "decision" is really "what should be
   said next" in an open-ended conversation**, as opposed to a single
   snapshot judgment about a conversation's content. Passing a chat
   transcript *as state* for a bounded judgment (e.g. "does the latest user
   message show disagreement?") is a documented, good-fit pattern — see the
-  Langfuse `noul` example in `jev-research.md`. What's a poor fit is asking
-  the model to manage or continue the dialogue itself; Jev has no
-  conversational memory of its own and each request evaluates one state
-  against fixed questions in a single, independent call
-  (`jev-research.md`, "State guidance" — "one state... one or more
-  questions"; "Officially documented architectural patterns").
+  Langfuse LLM-as-judge use case in `jev-overview.md`'s "Performance & Cost
+  Claims". What's a poor fit is asking the model to manage or continue the
+  dialogue itself; Jev has no conversational memory of its own and each
+  request evaluates one state against fixed questions in a single,
+  independent call (`jev-overview.md`, "Request Shape" — "One state is
+  evaluated against one or more questions per request").
 
 **Caveat that applies even to good-fit matches:** the schema guarantee
 ("can't hallucinate") only means the answer will be a validly-typed
 `noul`/`choice`/`score` — "answers can still be wrong." A migrated call
 still needs validation against labeled data before it's trusted in
-production (`jev-research.md`, "'Can't hallucinate' — what it actually
-means"; "Pre-production checklist recommended by the independent
-reviewer").
+production (`jev-overview.md`, "'Can't hallucinate' — what it actually
+means"; "Before shipping to production").
 
 ---
 
@@ -178,7 +184,8 @@ reviewer").
 The following are **illustrative sketches only** — they show the shape of
 a before/after migration using the `noul`/`choice`/`score` primitives from
 `jev-overview.md`, using the same Python SDK call shape documented in
-`jev-research.md` ("API / Integration Shape" — Python example). They have
+`references/integration-patterns.md` ("Core call shape" / plain Python
+agent loop). They have
 **not** been run against a live Jev API and should not be treated as
 verified-working code; `references/integration-patterns.md` and
 `scripts/validate_with_jev.py` are where an actual migration gets checked.
@@ -261,12 +268,12 @@ def should_allow_tool_call(tool_name, args, context, llm):
     # ... regex parsing of "yes/no" + a confidence number out of free text ...
 ```
 
-After (sketch — illustrative, not verified), modeled on the documented
-`pi-warden`-style guardrail pattern and the vendor's confidence-gated
-routing pattern. Note this uses `choice`, not `noul`: only `choice` and
-`score` answers carry a `confidence` field per the documented API
-(`jev-overview.md`/`jev-research.md` primitives table — `noul` returns only
-the `noul` probability), and an explicit `needs_review` option is added to
+After (sketch — illustrative, not verified), modeled on a documented
+tool-call guardrail pattern (per this skill's background research) and the
+vendor's confidence-gated routing pattern. Note this uses `choice`, not
+`noul`: only `choice` and `score` answers carry a `confidence` field per
+the documented API (`jev-overview.md` primitives table — `noul` returns
+only the `noul` probability), and an explicit `needs_review` option is added to
 the schema itself rather than derived in code, per the beri.net
 recommendation below:
 
@@ -298,7 +305,7 @@ def should_allow_tool_call(tool_name, args, context, jev_client):
 The explicit `needs_review` option is not optional flourish: Jev "cannot
 abstain" on a forced binary/choice with no such option, so it has to be
 added to the schema itself, not left to the model to invent
-(`jev-research.md`, "cannot abstain" note; beri.net pre-production
-recommendation to "add an explicit 'none of these' option to every
-choice"). The confidence check on top is still needed — a low-confidence
+(`jev-overview.md`, "Limitations" — "Jev cannot abstain"; "Before shipping
+to production" — add a "none of these" option to every `choice`). The
+confidence check on top is still needed — a low-confidence
 `allow` or `block` should route to review too.

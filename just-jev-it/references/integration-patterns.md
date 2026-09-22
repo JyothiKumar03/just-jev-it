@@ -2,19 +2,30 @@
 
 How to wire a typed Jev call into an existing codebase during the EXECUTE
 phase, once `fit-heuristics.md` has confirmed a decision point is a good
-Jev candidate. Every confirmed shape here traces to
-`docs/superpowers/plans/artifacts/jev-research.md` ("API / Integration
-Shape") or the condensed `jev-overview.md`. Anywhere the research doesn't
+Jev candidate. Every confirmed shape here traces to `jev-overview.md` and
+the background research used to compile it (TypeSafe AI's own docs, press
+coverage, and independent evaluations — see `jev-overview.md`'s
+`## Sources` section for the citable list). Anywhere the research doesn't
 confirm a detail, the snippet says so explicitly and should not be written
 into a user's repo as-is without verifying against `docs.typesafe.ai` first.
+
+## Contents
+
+- [Core call shape (recap)](#core-call-shape-recap)
+- [(a) Plain Python agent loop](#a-plain-python-agent-loop)
+- [(b) LangChain-style tool/chain](#b-langchain-style-toolchain)
+- [(c) Generic fallback — any framework with an LLM classification call](#c-generic-fallback--any-framework-with-an-llm-classification-call)
+- [Other confirmed integrations (pointers, not full patterns)](#other-confirmed-integrations-pointers-not-full-patterns)
 
 ## Core call shape (recap)
 
 Every Jev call needs a `state` (what's being judged), a `model`, and a
 `questions` map keyed by caller-chosen names. Official SDKs read the API
 key from `TYPESAFE_API_KEY` and construct the client as a context manager
-(Python) or a plain instance (JS) — see `jev-research.md`, "Official SDKs
-and repos," Python and TypeScript examples.
+(Python) or a plain instance (JS) — per this skill's background research
+(see `jev-overview.md`'s "Request Shape" for the SDKs' existence; verify
+the exact construction pattern against current SDK docs before relying on
+it).
 
 ```
 POST https://api.typesafe.ai/v1/systemone
@@ -24,8 +35,9 @@ POST https://api.typesafe.ai/v1/systemone
 
 **Response-access gotcha — read this before writing any "after" code.** The
 raw REST envelope and the TypeScript SDK both use a flat `answers` map
-(`response.answers.category.choice`, per `jev-research.md`'s TypeScript
-example). The **Python SDK does not mirror this** — its README example
+(`response.answers.category.choice`, per the background research's
+TypeScript example — verify against current SDK docs before relying on
+it). The **Python SDK does not mirror this** — its README example
 accesses `response.choices["category"].choice`, and the Langfuse `noul`
 example accesses `result.nouls["user_disagreement"].noul` — i.e. the Python
 client appears to expose per-type accessor properties (`.choices`,
@@ -35,8 +47,9 @@ client appears to expose per-type accessor properties (`.choices`,
 ```
 # shape not publicly confirmed — verify against TypeSafe docs before use
 # `.scores["<key>"].score` for `score`-type questions is inferred by analogy
-# with `.choices`/`.nouls`; jev-research.md's official Python README example
-# only demonstrates `.choices`, and the Langfuse example only `.nouls`.
+# with `.choices`/`.nouls`; this skill's background research (its official
+# Python README example) only demonstrates `.choices`, and its Langfuse
+# example only `.nouls`.
 ```
 
 Don't mix the two conventions when writing a migration: Python code uses
@@ -71,8 +84,9 @@ def decide_next_action(agent_state, llm):
 
 **After** — real SDK construction pattern
 (`with TypeSafeClient() as client:`), `Choice(instructions=..., criteria=...)`,
-and `response.choices["key"].choice` access, all per
-`jev-research.md`'s official Python README example:
+and `response.choices["key"].choice` access, all per this skill's
+background research (its official Python README example) — verify the
+exact accessor names against current SDK docs before relying on them:
 
 ```python
 from typesafe_sdk import Choice, TypeSafeClient
@@ -93,13 +107,13 @@ def decide_next_action(agent_state, client: TypeSafeClient):
         },
     )
     answer = response.choices["next_action"]
-    # `.choice` access is directly confirmed by jev-research.md's official
-    # Python README example. `.confidence` as a Python attribute (rather
-    # than `["confidence"]`) is inferred from the documented Answer JSON
-    # schema (choice answers carry a `confidence` field) plus the SDK's
-    # typed-accessor pattern — not directly shown in a Python code example
-    # in the research. Verify the exact attribute name against the current
-    # SDK before relying on it.
+    # `.choice` access is directly confirmed by this skill's background
+    # research (its official Python README example). `.confidence` as a
+    # Python attribute (rather than `["confidence"]`) is inferred from the
+    # documented Answer JSON schema (choice answers carry a `confidence`
+    # field) plus the SDK's typed-accessor pattern — not directly shown in
+    # a Python code example in that research. Verify the exact attribute
+    # name against the current SDK before relying on it.
     if answer.confidence < 0.5:
         return "escalate"  # low-confidence answers shouldn't drive the loop
     return answer.choice
@@ -116,22 +130,21 @@ with TypeSafeClient(model="jev-1.13.0") as client:
 
 The manual `if action not in {...}` fallback disappears — schema
 conformance is guaranteed — but the confidence check stays: the schema
-guarantee is about *shape*, not correctness (`jev-research.md`, "'Can't
+guarantee is about *shape*, not correctness (`jev-overview.md`, "'Can't
 hallucinate' — what it actually means"), and confidence-gated routing is
-Jev's own documented pattern (`jev-research.md`, "Officially documented
-architectural patterns" #2).
+Jev's own documented pattern (`jev-overview.md`, "Confidence Semantics").
 
 ---
 
 ## (b) LangChain-style tool/chain
 
-`jev-research.md` confirms LangChain ships an integration —
+This skill's background research confirms LangChain ships an integration —
 `TypeSafeClassifier`, which "accept[s] text, structured data, or LangChain
-messages" as state (`jev-research.md`, "Third-party / ecosystem integration
-surfaces" — LangChain). That's the extent of what the research confirms:
-the class name and what it accepts as state. The constructor's other
+messages" as state. That's the extent of what the research confirms: the
+class name and what it accepts as state. The constructor's other
 arguments, how questions are defined on it, and its output shape are **not**
-confirmed by any source in `jev-research.md`.
+confirmed by any source in that research — verify against current
+LangChain/TypeSafe docs before relying on them.
 
 **Before** — a LangChain classification chain built on a general LLM:
 
@@ -149,10 +162,11 @@ category = chain.run(message=ticket_text).strip().lower()
 ```
 
 **After, option 1 — `TypeSafeClassifier`** (real class name and state
-handling per `jev-research.md`; everything else is illustrative):
+handling per this skill's background research; everything else is
+illustrative):
 
 ```python
-# CONFIRMED (jev-research.md, "Third-party / ecosystem integration surfaces"):
+# CONFIRMED (per this skill's background research):
 # LangChain ships `TypeSafeClassifier`, which accepts text, structured data,
 # or LangChain messages as state.
 # shape not publicly confirmed — verify against TypeSafe docs before use
@@ -166,7 +180,10 @@ classifier = TypeSafeClassifier(
     questions={
         "category": {
             "instructions": "What is this support message about?",
-            "criteria": {"billing": None, "technical": None, "account": None},
+            # `needs_review` added per fit-heuristics.md: Jev cannot abstain
+            # on a forced choice, so every `choice` question needs an
+            # explicit fallback option in the schema itself.
+            "criteria": {"billing": None, "technical": None, "account": None, "needs_review": None},
         },
     },
 )
@@ -190,7 +207,10 @@ def _classify_ticket(inputs: dict) -> str:
             questions={
                 "category": Choice(
                     instructions="What is this support message about?",
-                    criteria={"billing": None, "technical": None, "account": None},
+                    # `needs_review` added per fit-heuristics.md: Jev cannot
+                    # abstain on a forced choice, so every `choice` question
+                    # needs an explicit fallback option in the schema itself.
+                    criteria={"billing": None, "technical": None, "account": None, "needs_review": None},
                 ),
             },
         )
@@ -203,16 +223,16 @@ category = classify_ticket.invoke({"message": ticket_text})
 When writing this into a user's repo, prefer option 2 unless
 `TypeSafeClassifier`'s real API is confirmed first-hand (e.g. by reading its
 installed source or current docs) — it only uses shapes this reference can
-verify against `jev-research.md`.
+verify against this skill's background research.
 
 ---
 
 ## (c) Generic fallback — any framework with an LLM classification call
 
 For a framework with no documented Jev integration (i.e. not Python/JS SDK,
-Pydantic AI, LangChain, Cloudflare Workers AI, or LiteLLM —
-`jev-research.md`, "Third-party / ecosystem integration surfaces"), fall
-back to the plain REST call. The endpoint, auth, and body shape are
+Pydantic AI, LangChain, Cloudflare Workers AI, or LiteLLM — per this
+skill's background research on third-party / ecosystem integration
+surfaces), fall back to the plain REST call. The endpoint, auth, and body shape are
 directly from the official API reference, so this pattern is fully
 confirmed even though it isn't SDK-mediated. This is also the right pattern
 when the target language has no official or community SDK at all.
@@ -230,8 +250,7 @@ label = llm_classify(
 ```
 
 **After** — same call signature, backed by a raw HTTP call to the
-documented endpoint (`jev-research.md`, "Endpoint and auth," "Request
-body," "Response body"):
+documented endpoint (`jev-overview.md`, "Request Shape"):
 
 ```python
 import os
@@ -265,11 +284,18 @@ def jev_classify(state: dict, key: str, instructions: str, criteria: dict) -> di
     resp.raise_for_status()  # 401 bad key, 422 bad body, 429/529 — see below
     return resp.json()["answers"][key]
 
+# `needs_review` added per fit-heuristics.md: Jev cannot abstain on a
+# forced choice, so every `choice` question needs an explicit fallback
+# option in the schema itself.
 answer = jev_classify(
     state={"document": document_text},
     key="label",
     instructions="Is this document spam?",
-    criteria={"spam": "Unsolicited, promotional, or malicious", "not_spam": "Legitimate content"},
+    criteria={
+        "spam": "Unsolicited, promotional, or malicious",
+        "not_spam": "Legitimate content",
+        "needs_review": "Not clearly spam or legitimate from the given content",
+    },
 )
 label = answer["choice"]
 ```
@@ -281,7 +307,9 @@ using `typesafe_sdk`, not with a bare `requests` call (see the gotcha in
 
 **Retries:** the docs recommend exponential backoff on `429`
 (rate-limited) and `529` (overloaded), and note the official SDKs handle
-this automatically (`jev-research.md`, "Errors and retries"). A hand-rolled
+this automatically (per this skill's background research on TypeSafe's
+error/retry docs — verify against `docs.typesafe.ai/api` for current
+guidance). A hand-rolled
 REST fallback like the one above does **not** get this for free — add
 backoff around `429`/`529` explicitly, or prefer an official SDK where one
 exists.
@@ -290,9 +318,9 @@ exists.
 
 ## Other confirmed integrations (pointers, not full patterns)
 
-Not covered above but documented in `jev-research.md`, "Third-party /
-ecosystem integration surfaces," for when the audited workflow already uses
-one of these:
+Not covered above but documented in this skill's background research (see
+`jev-overview.md`'s `## Sources` for the citable references), for when the
+audited workflow already uses one of these:
 
 - **Pydantic AI** — `TypeSafeModel`, used as
   `Agent('typesafe:jev-latest', output_type=SomeModel)`; each field of
