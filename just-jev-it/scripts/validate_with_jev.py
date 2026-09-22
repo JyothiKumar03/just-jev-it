@@ -30,6 +30,7 @@ import argparse
 import json
 import os
 import sys
+import time
 import urllib.request
 import urllib.error
 
@@ -112,6 +113,16 @@ def extract_decision(case, answers):
     return None, None
 
 
+# Per jev-research.md's "Errors and retries" section: 429 (rate limit) and
+# 529 (service overloaded) should be retried with exponential backoff; the
+# official SDKs do this automatically. This is a lightweight validation
+# script, not a production client, so we keep it to a couple of short,
+# fixed-backoff retries rather than a full retry framework.
+RETRYABLE_STATUS_CODES = {429, 529}
+MAX_RETRIES = 2
+BACKOFF_SECONDS = 1.5
+
+
 def call_real_api(case, api_key):
     payload = json.dumps({
         "state": case["state"],
@@ -127,8 +138,19 @@ def call_real_api(case, api_key):
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=10) as resp:
-        body = json.loads(resp.read().decode("utf-8"))
+
+    attempt = 0
+    while True:
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                body = json.loads(resp.read().decode("utf-8"))
+            break
+        except urllib.error.HTTPError as exc:
+            if exc.code in RETRYABLE_STATUS_CODES and attempt < MAX_RETRIES:
+                attempt += 1
+                time.sleep(BACKOFF_SECONDS * attempt)
+                continue
+            raise
 
     answers = body.get("answers", {})
     decision, confidence = extract_decision(case, answers)
@@ -174,12 +196,25 @@ def main():
                 outcome = call_real_api(case, api_key)
             else:
                 outcome = simulate(case)
-        except (urllib.error.URLError, urllib.error.HTTPError) as exc:
+        except urllib.error.URLError as exc:
+            # Covers HTTPError too (it subclasses URLError) — network errors,
+            # non-2xx responses (including 429/529 once retries in
+            # call_real_api are exhausted), and connection failures.
             outcome = simulate(
                 case,
                 note=f"SIMULATED - real API call failed ({exc}), falling back to simulation",
             )
             outcome["error"] = str(exc)
+            mode = "simulated"
+        except (KeyError, json.JSONDecodeError) as exc:
+            # A malformed case (missing "state"/"questions") or an
+            # unexpected non-JSON/malformed response body should degrade
+            # this one case to simulation rather than crash the whole run.
+            outcome = simulate(
+                case,
+                note=f"SIMULATED - malformed case or response ({exc!r}), falling back to simulation",
+            )
+            outcome["error"] = repr(exc)
             mode = "simulated"
 
         if schema_warnings:
