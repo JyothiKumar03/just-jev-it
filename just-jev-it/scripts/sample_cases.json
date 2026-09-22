@@ -1,0 +1,46 @@
+[
+  {
+    "id": "case-1",
+    "state": {
+      "order_total": 42.50,
+      "customer_risk_score": 0.1,
+      "customer_notes": "Long-standing customer, no prior disputes."
+    },
+    "model": "jev-1.13.0",
+    "questions": {
+      "auto_approve_decision": {
+        "type": "choice",
+        "instructions": "Given the order total and customer risk score, should this order be auto-approved, sent for manual review, or rejected?",
+        "criteria": {
+          "approve": "Low order total and low risk score; safe to auto-approve without human review.",
+          "review": "Moderate order total or moderate risk score; a human should check before approving.",
+          "reject": "High order total combined with high risk score; too risky to approve automatically."
+        }
+      }
+    },
+    "decision_key": "auto_approve_decision",
+    "expected_decision": "approve"
+  },
+  {
+    "id": "case-2",
+    "state": {
+      "order_total": 9999.00,
+      "customer_risk_score": 0.8,
+      "customer_notes": "New account, first order, billing and shipping addresses differ by country."
+    },
+    "model": "jev-1.13.0",
+    "questions": {
+      "auto_approve_decision": {
+        "type": "choice",
+        "instructions": "Given the order total and customer risk score, should this order be auto-approved, sent for manual review, or rejected?",
+        "criteria": {
+          "approve": "Low order total and low risk score; safe to auto-approve without human review.",
+          "review": "Moderate order total or moderate risk score; a human should check before approving.",
+          "reject": "High order total combined with high risk score; too risky to approve automatically."
+        }
+      }
+    },
+    "decision_key": "auto_approve_decision",
+    "expected_decision": "reject"
+  }
+]
