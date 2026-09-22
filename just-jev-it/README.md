@@ -1,5 +1,7 @@
 # just-jev-it
 
+## What it does
+
 Audit an existing workflow, agent, automation, or codebase to find LLM call sites where TypeSafe AI's Jev model (a non-generative, typed-decision "System One" model) could replace or augment them, then plan, execute, and validate the migration. This skill works through four phases: **Audit** (find LLM calls and output-branching points), **Plan** (write before/after migration strategies with user approval gate), **Execute** (apply approved changes), and **Validate** (confirm against Jev with real or simulated runs).
 
 ## When it triggers
