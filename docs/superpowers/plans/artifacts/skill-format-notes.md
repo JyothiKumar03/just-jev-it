@@ -84,7 +84,7 @@ Checked four real skill directories in `anthropics/skills/skills/`:
 
 So: the spec's `references/` (plural) convention is the documented ideal and is what skill-creator also teaches, but **none of the four real Anthropic-authored example skills actually use a folder named `references/`.** Two put reference `.md` files at the skill root; one uses `reference/` singular; one has no reference material at all. Recommendation for just-jev-it: follow the spec's plural `references/` convention (it's the documented standard and the safer bet for a public submission), but don't be surprised if reviewers don't enforce it — root-level reference `.md` files are clearly an accepted pattern in practice.
 
-Also note: every real example inspected ships a `LICENSE.txt` and sets `license: Proprietary. LICENSE.txt has complete terms` — but those are Anthropic's own proprietary document-skill family, not representative of what an open-source community submission should put in `license:`. For just-jev-it, use a real OSS license identifier (e.g. `MIT` or `Apache-2.0`) rather than copying that literal string.
+Also note: every real example inspected ships a `LICENSE.txt` and sets `license: Proprietary. LICENSE.txt has complete terms`. This is not an Anthropic-internal quirk outside the spec — it's actually the normative spec's own documented example value for the `license` field (`agentskills.io/specification`, `license` field section). But it's a placeholder-style value describing a proprietary license bundled as a file, which fits Anthropic's own document-skill family; it isn't the right value for a public, open-source community submission. For just-jev-it, use a real OSS license identifier (e.g. `MIT` or `Apache-2.0`) rather than copying that literal string.
 
 ---
 
@@ -133,7 +133,7 @@ Given that, here is a practical pre-submission checklist synthesized from the sp
 - [ ] `name`: 1–64 chars, lowercase alphanumeric + hyphens only, no leading/trailing/consecutive hyphens.
 - [ ] `description`: 1–1024 chars, states both *what* the skill does and *when* to use it, includes concrete trigger keywords/phrases a user would actually type, and is a little "pushy" per skill-creator (don't undersell triggering conditions).
 - [ ] Description includes a negative-scope clause if the skill could be confused with an adjacent skill/tool ("Do NOT use for…").
-- [ ] `license:` set to a real identifier appropriate for an open-source submission (not the internal `Proprietary…` string copied from Anthropic's own docx/pdf/pptx skills).
+- [ ] `license:` set to a real OSS identifier appropriate for an open-source submission (e.g. `MIT`, `Apache-2.0`) — not the spec's `Proprietary. LICENSE.txt has complete terms` sample value, which is a valid spec example but describes a proprietary/bundled-license case, and is also what Anthropic's own docx/pdf/pptx skills happen to use.
 - [ ] `compatibility:` omitted unless there's a genuine environment requirement (most skills should omit it).
 - [ ] `SKILL.md` body under ~500 lines / ~5000 tokens; anything larger moved into `references/`.
 - [ ] Any reference file the body points to is referenced with an explicit **on-demand condition** ("if X, read Y"), not just a bare link, and reference chains stay one level deep from `SKILL.md`.
