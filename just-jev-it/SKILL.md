@@ -121,7 +121,12 @@ point(s) against Jev directly — don't just trust that the code compiles.
    executed change's existing test fixtures if the codebase has them;
    otherwise synthesize a small set of edge cases yourself (a clear
    positive, a clear negative, and at least one boundary/ambiguous case
-   per migrated decision point).
+   per migrated decision point). **Always set `expected_decision` on every
+   case**, to the change's own expected/current behavior for that
+   case — most users won't have `TYPESAFE_API_KEY` set, so the default run
+   is simulated, and the script's simulated path just echoes
+   `expected_decision` straight back as the decision; a case without it
+   reports `"decision": "unknown"` and validates nothing.
 2. Run the validator exactly as it's built to be called:
    ```
    python3 scripts/validate_with_jev.py --cases cases.json
@@ -130,7 +135,14 @@ point(s) against Jev directly — don't just trust that the code compiles.
    only when `TYPESAFE_API_KEY` is set in the environment and the call
    succeeded; otherwise it falls back to `"simulated"` automatically and
    labels every result accordingly.
-3. Report the results back to the user **verbatim**, including the
+3. **If any result carries a `schema_warnings` field, fix `cases.json`
+   and re-run before reporting anything to the user.** The script attaches
+   this per-case when a question's shape doesn't match the real API (wrong
+   `type`, `options`/`min`/`max` used instead of `criteria`, empty
+   `choice` criteria, or a `score` outside 2–10 levels) — it does not fail
+   the run or change the exit code, so a clean-looking result can still
+   carry one.
+4. Report the results back to the user **verbatim**, including the
    top-level `mode` field. Never summarize a `simulated` run as if it
    were measured behavior — say plainly "this was simulated, not a real
    Jev call" whenever `mode` is `"simulated"`, and tell the user how to
